@@ -1,0 +1,9 @@
+{
+    "Keys": ["osm_custom"],
+    "Provider": "osm_custom",
+    "Version": 100,
+    "Experimental": false,
+    "Features": [
+        "Offline mapping feature"
+    ]
+}
