@@ -31,7 +31,7 @@ QImage QTileFinder::getTile(uint32_t x, uint32_t y, uint32_t zoom)
     }
     countTls += result;
     QFile file("/home/deymos/Qt/5.15.2/Src/qtlocation/src/plugins/geoservices/osm_custom/file.bin");
-    QTileDataClass *tile = new QTileDataClass(0,0,0,0,0);
+    QTileDataClass *tile = new QTileDataClass(0,0,0,0,0,0,0);
     if(file.open(QIODevice::ReadOnly))
     {
         file.seek(400 + sizeof(QTileDataClass)*(countTls));
