@@ -32,7 +32,7 @@ QImage QGeoFileTileCacheOsm::drawOnTile(QImage image, coordinateStruct coord, co
 {
     qDebug()<<"fuck";
     double lattitude = 53.9108;
-    double longitude = 27.4850;//почему то плохо рисует, нужно подправить корректность координат
+    double longitude = 27.4850;
     int checkLat = (startCoord.lattitude - lattitude)/stepLattitude;
     int checkLon = (longitude - startCoord.longitude)/stepLongitude;
     //qDebug()<<checkLat<<" "<<checkLon;
@@ -42,18 +42,6 @@ QImage QGeoFileTileCacheOsm::drawOnTile(QImage image, coordinateStruct coord, co
     pen.setColor(Qt::black);
     painter.setPen(pen);
     painter.drawPoint(checkLon,checkLat);
-//    for(int i=0;i<256;i++)
-//    {
-//        for(int j=0;j<256;j++)
-//        {
-//            if(startCoord.lattitude<coord.lattitude && startCoord.longitude < coord.longitude && startCoord.lattitude + stepLattitude
-//                    >= coord.lattitude && startCoord.longitude+ stepLongitude >= coord.longitude)
-//            {
-//
-
-//            }
-//        }
-//    }
     return image;
 }
 QGeoFileTileCacheOsm::QGeoFileTileCacheOsm()
