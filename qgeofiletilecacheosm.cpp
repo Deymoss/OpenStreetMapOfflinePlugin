@@ -20,28 +20,41 @@ QGeoFileTileCacheOsm::QGeoFileTileCacheOsm(const QVector<QGeoTileProviderOsm *> 
             m_offlineData = true;
     }
     qDebug()<<"нормальный конструктор";
-    //qDebug()<<instance;
-////    if(!instance)
-////    {
-////        qDebug()<<this;
-////        instance = this;
-////    }
-//     rofl.setKey("/test");
-////    qDebug()<<"SOZDANIE: "<<rofl.create(8);
-////   // rofl.lock();
 
-//    rofl.attach();
-////    qDebug()<<rofl.errorString();
-//    auto cst = qobject_cast<QObject*>(this);
-//    char *ptr = (char*)rofl.data();
-//    const char *from = (char*)cst;
-//    memcpy(ptr,from,sizeof(this));
-    //qDebug()<<"1"<<(char*) this;
 }
 QGeoFileTileCacheOsm::~QGeoFileTileCacheOsm()
 {
     std::cerr<<"Я упал"<<std::flush;
+    
+}
 
+QImage QGeoFileTileCacheOsm::drawOnTile(QImage image, coordinateStruct coord, coordinateStruct startCoord, double stepLattitude, double stepLongitude)
+{
+    qDebug()<<"fuck";
+    double lattitude = 53.9108;
+    double longitude = 27.4850;//почему то плохо рисует, нужно подправить корректность координат
+    int checkLat = (startCoord.lattitude - lattitude)/stepLattitude;
+    int checkLon = (longitude - startCoord.longitude)/stepLongitude;
+    //qDebug()<<checkLat<<" "<<checkLon;
+    QPainter painter(&image);
+    QPen pen;
+    pen.setWidth(10);
+    pen.setColor(Qt::black);
+    painter.setPen(pen);
+    painter.drawPoint(checkLon,checkLat);
+//    for(int i=0;i<256;i++)
+//    {
+//        for(int j=0;j<256;j++)
+//        {
+//            if(startCoord.lattitude<coord.lattitude && startCoord.longitude < coord.longitude && startCoord.lattitude + stepLattitude
+//                    >= coord.lattitude && startCoord.longitude+ stepLongitude >= coord.longitude)
+//            {
+//
+
+//            }
+//        }
+//    }
+    return image;
 }
 QGeoFileTileCacheOsm::QGeoFileTileCacheOsm()
 {
@@ -50,6 +63,31 @@ QGeoFileTileCacheOsm::QGeoFileTileCacheOsm()
 QGeoFileTileCacheOsm *QGeoFileTileCacheOsm::getInstance()
 {
     return instance;
+}
+
+coordinateStruct QGeoFileTileCacheOsm::xyToLatLon(const QGeoTileSpec &spec)
+{
+    coordinateStruct coord;
+    coord.longitude = spec.x() / (double)(1 << spec.zoom()) * 360.0 - 180;
+    double n = M_PI - 2.0 * M_PI * spec.y() / (double)(1 << spec.zoom());
+    coord.lattitude = 180.0 / M_PI * atan(0.5 * (exp(n) - exp(-n)));
+    return coord;
+}
+
+bool QGeoFileTileCacheOsm::isNeededTile(const QGeoTileSpec &spec, coordinateStruct coordinates)
+{
+    int x = (coordinates.longitude + 180)/360 * pow(2,spec.zoom());
+    //qDebug()<<x;
+    double latrad = coordinates.lattitude * M_PI/180.0;
+    int y = (int)(floor((1.0 - asinh(tan(latrad)) / M_PI) / 2.0 * (1 << spec.zoom())));
+    if(spec.x() == x && spec.y() == y)
+    {
+        return true;
+    }
+    else
+    {
+        return false;
+    }
 }
 
 QSharedPointer<QGeoTileTexture> QGeoFileTileCacheOsm::get(const QGeoTileSpec &spec)
@@ -101,34 +139,26 @@ void QGeoFileTileCacheOsm::init()
 
 QSharedPointer<QGeoTileTexture> QGeoFileTileCacheOsm::getFromOfflineStorage(const QGeoTileSpec &spec)
 {
-//    if (!m_offlineData)
-//        return QSharedPointer<QGeoTileTexture>();
-
-//    int providerId = spec.mapId() - 1;
-//    if (providerId < 0 || providerId >= m_providers.size())
-//        return QSharedPointer<QGeoTileTexture>();
-
-//    const QString fileName = tileSpecToFilename(spec, QStringLiteral("*"));
-//    QStringList validTiles = m_offlineDirectory.entryList({fileName});
-//    if (!validTiles.size())
-//        return QSharedPointer<QGeoTileTexture>();
-
-//    QFile file(m_offlineDirectory.absoluteFilePath(validTiles.first()));
-//    qDebug()<<spec;
     QTileFinder *finder = new QTileFinder();
+    coordinateStruct str;
 
-//    if (!file.open(QIODevice::ReadOnly))
-//        return QSharedPointer<QGeoTileTexture>();
-//    QByteArray bytes = file.readAll();
-//    file.close();
-    QImage image = finder->getTile(spec.x(),spec.y(),spec.zoom());;
+    QImage image = finder->getTile(spec.x(),spec.y(),spec.zoom());
+//    for(int i=0; i<coordinates.length(); i++)
+//    {
 
-//    if (!image.loadFromData(bytes)) {
-//        handleError(spec, QLatin1String("Problem with tile image"));
-//        return QSharedPointer<QGeoTileTexture>(0);
+    str.lattitude = 53.9108;
+    str.longitude = 27.4850;
+    coordinates.push_back(str);
+    //qDebug()<<coordinates.at(0).lattitude<<" "<<coordinates.at(0).longitude;
+        if(isNeededTile(spec, str))
+        {
+            QTileDataClass tile = finder->getTileInfo(spec.x(),spec.y(),spec.zoom());
+            //qDebug()<<spec.x()<<spec.y();
+            coordinateStruct startCoord = xyToLatLon(spec);
+            stepLatLon(spec);
+            image = drawOnTile(image, str, startCoord, stepLattitude, stepLongitude);
+        }
 //    }
-
-    //addToMemoryCache(spec, bytes, QString());
     return addToTextureCache(spec, image);
 }
 
@@ -166,6 +196,18 @@ void QGeoFileTileCacheOsm::loadTiles(int mapId)
         QString filename = dir.filePath(files.at(i));
         addToDiskCache(spec, filename);
     }
+}
+
+void QGeoFileTileCacheOsm::stepLatLon(const QGeoTileSpec &spec)
+{
+    longitude = (spec.x()/pow(2,spec.zoom()))*360-180;
+    lattitude = atan(sinh(M_PI-(spec.y()/pow(2,spec.zoom()))*(2*M_PI)))*(180/M_PI);
+    longitudeOfTheTopRightCorner = (spec.x()/pow(2,spec.zoom()))*360-180;
+    lattitudeOfTheTopRightCorner = atan(sinh(M_PI-((spec.y()+1)/pow(2,spec.zoom()))*(2*M_PI)))*(180/M_PI);
+    longitudeOfTheBottomLeftCorner = ((spec.x()+1)/pow(2,spec.zoom()))*360-180;
+    lattitudeOfTheBottomLeftCorner = atan(sinh(M_PI-(spec.x()/pow(2,spec.zoom()))*(2*M_PI)))*(180/M_PI);
+    stepLattitude = (lattitude - lattitudeOfTheTopRightCorner)/256;
+    stepLongitude = (longitudeOfTheBottomLeftCorner - longitude)/256;
 }
 
 QString QGeoFileTileCacheOsm::tileSpecToFilename(const QGeoTileSpec &spec, const QString &format) const

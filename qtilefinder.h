@@ -14,6 +14,7 @@ class QTileFinder
 public:
     QTileFinder();
     QImage getTile(uint32_t x, uint32_t y, uint32_t zoom);
+    QTileDataClass getTileInfo(uint32_t x, uint32_t y, uint32_t zoom);
     QVector<ConstantStruct> constants;
 };
 

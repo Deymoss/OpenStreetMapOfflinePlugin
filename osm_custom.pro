@@ -20,6 +20,7 @@ DISTFILES += \
 
 HEADERS += \
     constantstruct.h \
+    coordinateStruct.h \
     qcoordinatestoreosm.h \
     qgeofiletilecacheosm.h \
     qgeomapreplyosm.h \

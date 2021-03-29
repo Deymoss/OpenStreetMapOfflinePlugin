@@ -43,8 +43,11 @@
 #include <QtConcurrent>
 #include <QSharedMemory>
 #include <QtDebug>
+#include <QPainter>
+#include <math.h>
 #include <qatomic.h>
 #include <qtilefinder.h>
+#include "coordinateStruct.h"
 
 QT_BEGIN_NAMESPACE
 
@@ -59,7 +62,14 @@ public:
     QGeoFileTileCacheOsm();
     ~QGeoFileTileCacheOsm();
     static QGeoFileTileCacheOsm * instance;
+    QVector<coordinateStruct> coordinates;
+    QImage drawOnTile(QImage image, coordinateStruct coord, coordinateStruct startCoord, double stepLattitude, double stepLongitude);
     QGeoFileTileCacheOsm *getInstance();
+    coordinateStruct xyToLatLon(const QGeoTileSpec &spec);
+    double lattitude, longitude, longitudeOfTheTopRightCorner, lattitudeOfTheTopRightCorner, longitudeOfTheBottomLeftCorner,lattitudeOfTheBottomLeftCorner;
+    double stepLattitude;
+    double stepLongitude;
+    bool isNeededTile(const QGeoTileSpec &spec, coordinateStruct coordinates);
     QSharedPointer<QGeoTileTexture> get(const QGeoTileSpec &spec) override;
     QSharedMemory rofl;
 
@@ -73,9 +83,8 @@ protected:
     QSharedPointer<QGeoTileTexture> getFromOfflineStorage(const QGeoTileSpec &spec);
     void dropTiles(int mapId);
     void loadTiles(int mapId);
-
     void clearObsoleteTiles(const QGeoTileProviderOsm *p);
-
+    void stepLatLon(const QGeoTileSpec &spec);
     QDir m_offlineDirectory;
     bool m_offlineData;
     QVector<QGeoTileProviderOsm *> m_providers;
