@@ -20,6 +20,7 @@ DISTFILES += \
 
 HEADERS += \
     constantstruct.h \
+    qcoordinatestoreosm.h \
     qgeofiletilecacheosm.h \
     qgeomapreplyosm.h \
     qgeoserviceproviderpluginosm.h \
@@ -32,6 +33,7 @@ HEADERS += \
 
 SOURCES += \
     constantstruct.cpp \
+    qcoordinatestoreosm.cpp \
     qgeofiletilecacheosm.cpp \
     qgeomapreplyosm.cpp \
     qgeoserviceproviderpluginosm.cpp \
