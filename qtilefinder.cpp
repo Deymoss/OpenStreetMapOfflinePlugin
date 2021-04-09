@@ -48,5 +48,27 @@ QImage QTileFinder::getTile(uint32_t x, uint32_t y, uint32_t zoom)
     img.loadFromData(arr);
     QImage image(img.toImage());
 
- return image;
+    return image;
+}
+
+QTileDataClass QTileFinder::getTileInfo(uint32_t x, uint32_t y, uint32_t zoom)
+{
+    int countOfXNum = x-constants.at(zoom-1).xTileStart;
+    int countOfYnum = y - constants.at(zoom-1).yTileStart;
+    int countTls = constants.at(zoom-1).xTileCount*countOfYnum + countOfXNum;
+    int result = 0;
+    for(int k = 0; k<zoom - 1; k++)
+    {
+        result += constants.at(k).countOfTiles;
+    }
+    countTls += result;
+    QFile file("/home/deymos/Qt/5.15.2/Src/qtlocation/src/plugins/geoservices/osm_custom/file.bin");
+    QTileDataClass *tile = new QTileDataClass(0,0,0,0,0,0,0);
+    if(file.open(QIODevice::ReadOnly))
+    {
+        file.seek(400 + sizeof(QTileDataClass)*(countTls));
+        QDataStream dataStream(&file);
+        dataStream>>*tile;
+    }
+    return *tile;
 }

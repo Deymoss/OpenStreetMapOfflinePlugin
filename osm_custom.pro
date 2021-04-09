@@ -19,7 +19,9 @@ DISTFILES += \
     providers/5.8/transit
 
 HEADERS += \
+    LineDrawingStruct.h \
     constantstruct.h \
+    coordinateStruct.h \
     qcoordinatestoreosm.h \
     qgeofiletilecacheosm.h \
     qgeomapreplyosm.h \
