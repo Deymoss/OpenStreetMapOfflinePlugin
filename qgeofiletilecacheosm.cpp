@@ -28,20 +28,14 @@ QGeoFileTileCacheOsm::~QGeoFileTileCacheOsm()
     
 }
 
-QImage QGeoFileTileCacheOsm::drawOnTile(QImage image, coordinateStruct coord, coordinateStruct startCoord, double stepLattitude, double stepLongitude)
+QImage QGeoFileTileCacheOsm::drawOnTile(QImage image)
 {
-    qDebug()<<"fuck";
-    double lattitude = 53.9108;
-    double longitude = 27.4850;
-    int checkLat = (startCoord.lattitude - lattitude)/stepLattitude;
-    int checkLon = (longitude - startCoord.longitude)/stepLongitude;
-    //qDebug()<<checkLat<<" "<<checkLon;
     QPainter painter(&image);
     QPen pen;
-    pen.setWidth(10);
+    pen.setWidth(3);
     pen.setColor(Qt::black);
     painter.setPen(pen);
-    painter.drawPoint(checkLon,checkLat);
+    painter.drawLine(drawingVector.at(0).xFrom, drawingVector.at(0).yFrom,drawingVector.at(0).xTo, drawingVector.at(0).yTo);
     return image;
 }
 QGeoFileTileCacheOsm::QGeoFileTileCacheOsm()
@@ -129,22 +123,23 @@ QSharedPointer<QGeoTileTexture> QGeoFileTileCacheOsm::getFromOfflineStorage(cons
 {
     QTileFinder *finder = new QTileFinder();
     coordinateStruct str;
-
     QImage image = finder->getTile(spec.x(),spec.y(),spec.zoom());
-//    for(int i=0; i<coordinates.length(); i++)
-//    {
 
-    str.lattitude = 53.9108;
-    str.longitude = 27.4850;
+    str.lattitude = 53.9124;
+    str.longitude = 27.4385;
     coordinates.push_back(str);
-    //qDebug()<<coordinates.at(0).lattitude<<" "<<coordinates.at(0).longitude;
+    coordinateStruct str1;
+    str1.lattitude = 53.9094;
+    str1.longitude = 27.4481;
+    coordinates.push_back(str1);
+
+    //qDebug()<<coordinates->at(0).lattitude<<" "<<coordinates->at(0).longitude;
         if(isNeededTile(spec, str))
         {
-            QTileDataClass tile = finder->getTileInfo(spec.x(),spec.y(),spec.zoom());
-            //qDebug()<<spec.x()<<spec.y();
-            coordinateStruct startCoord = xyToLatLon(spec);
             stepLatLon(spec);
-            image = drawOnTile(image, str, startCoord, stepLattitude, stepLongitude);
+            prepareLineDrawing(spec.zoom(), &coordinates);
+            //stepLatLon(spec);
+            image = drawOnTile(image);
         }
 //    }
     return addToTextureCache(spec, image);
@@ -183,6 +178,54 @@ void QGeoFileTileCacheOsm::loadTiles(int mapId)
             continue;
         QString filename = dir.filePath(files.at(i));
         addToDiskCache(spec, filename);
+    }
+}
+
+void QGeoFileTileCacheOsm::prepareLineDrawing(int zoom, QVector<coordinateStruct> *coordinateVector)
+{
+    int xMerk1,yMerk1,xMerk2,yMerk2,count = 0;
+    int offsetX1;
+    int offsetY1;
+    int offsetX2;
+    int offsetY2;
+    drawingVector.clear();
+    while(coordinateVector->size()!=count+1)
+    {
+        xMerk1 = (coordinateVector->at(count).longitude + 180)/360 * pow(2,zoom);
+        double latrad = coordinateVector->at(count).lattitude * M_PI/180.0;
+        yMerk1 = (int)(floor((1.0 - asinh(tan(latrad)) / M_PI) / 2.0 * (1 << zoom)));
+        xMerk2 = (coordinateVector->at(count+1).longitude + 180)/360 * pow(2,zoom);
+        double latrad1 = coordinateVector->at(count+1).lattitude * M_PI/180.0;
+        yMerk2 = (int)(floor((1.0 - asinh(tan(latrad1)) / M_PI) / 2.0 * (1 << zoom)));
+        QGeoTileSpec startSpec;
+        startSpec.setX(xMerk1);
+        startSpec.setY(yMerk1);
+        startSpec.setZoom(zoom);
+        stepLatLon(startSpec);
+        offsetY1 = abs((lattitude - coordinateVector->at(count).lattitude))/stepLattitude;
+        offsetX1 = abs((longitude - coordinateVector->at(count).longitude))/stepLongitude;//посчитать вручную
+
+        startSpec.setX(xMerk2);
+        startSpec.setY(yMerk2);
+        stepLatLon(startSpec);
+        offsetY2 = abs((lattitude - coordinateVector->at(count+1).lattitude)/stepLattitude);
+        offsetX2 = abs((longitude - coordinateVector->at(count+1).longitude)/stepLongitude);
+        qDebug()<<lattitude<<" "<< coordinateVector->at(count).lattitude<< " "<<stepLattitude;
+        qDebug()<<longitude<<" q "<<coordinateVector->at(count).longitude<< " "<<stepLongitude;
+        //добавить условие на одном ли тайле находятся точки, и если не на одном то дальше по формуле считать куда оно идёт
+        //рисует не там де нада
+        if(offsetX2 <= 256 && offsetY2 <= 256)
+        {
+            CountDotsForLine dots;
+            dots.tileX = xMerk1;
+            dots.tileY = yMerk1;
+            dots.xFrom = offsetX1;
+            dots.yFrom = offsetY1;
+            dots.xTo = offsetX2;
+            dots.yTo = offsetY2;
+            drawingVector.push_back(dots);
+        }
+        count++;
     }
 }
 
