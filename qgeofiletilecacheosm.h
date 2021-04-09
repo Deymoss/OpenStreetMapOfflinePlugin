@@ -48,6 +48,7 @@
 #include <qatomic.h>
 #include <qtilefinder.h>
 #include "coordinateStruct.h"
+#include "LineDrawingStruct.h"
 
 QT_BEGIN_NAMESPACE
 
@@ -63,7 +64,8 @@ public:
     ~QGeoFileTileCacheOsm();
     static QGeoFileTileCacheOsm * instance;
     QVector<coordinateStruct> coordinates;
-    QImage drawOnTile(QImage image, coordinateStruct coord, coordinateStruct startCoord, double stepLattitude, double stepLongitude);
+    QVector<CountDotsForLine>  drawingVector;
+    QImage drawOnTile(QImage image);
     QGeoFileTileCacheOsm *getInstance();
     coordinateStruct xyToLatLon(const QGeoTileSpec &spec);
     double lattitude, longitude, longitudeOfTheTopRightCorner, lattitudeOfTheTopRightCorner, longitudeOfTheBottomLeftCorner,lattitudeOfTheBottomLeftCorner;
@@ -83,6 +85,7 @@ protected:
     QSharedPointer<QGeoTileTexture> getFromOfflineStorage(const QGeoTileSpec &spec);
     void dropTiles(int mapId);
     void loadTiles(int mapId);
+    void prepareLineDrawing(int zoom, QVector<coordinateStruct>* coordinateVector);
     void clearObsoleteTiles(const QGeoTileProviderOsm *p);
     void stepLatLon(const QGeoTileSpec &spec);
     QDir m_offlineDirectory;
