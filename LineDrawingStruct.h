@@ -11,12 +11,12 @@ struct LineDrawingStruct
 
 struct CountDotsForLine
 {
-    uint32_t tileX;
-    uint32_t tileY;
-    uint32_t xFrom;
-    uint32_t xTo;
-    uint32_t yFrom;
-    uint32_t yTo;
+    int tileX;
+    int tileY;
+    int xFrom;
+    int xTo;
+    int yFrom;
+    int yTo;
 };
 
 #endif // LINEDRAWINGSTRUCT_H

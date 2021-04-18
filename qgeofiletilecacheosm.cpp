@@ -19,6 +19,14 @@ QGeoFileTileCacheOsm::QGeoFileTileCacheOsm(const QVector<QGeoTileProviderOsm *> 
         if (m_offlineDirectory.exists())
             m_offlineData = true;
     }
+    coordinateStruct str;
+    str.lattitude = 53.9124;
+    str.longitude = 27.4385;
+    coordinates.push_back(str);
+    coordinateStruct str1;
+    str1.lattitude = 52.4661;
+    str1.longitude = 30.9457;
+    coordinates.push_back(str1);
     qDebug()<<"нормальный конструктор";
 
 }
@@ -28,14 +36,24 @@ QGeoFileTileCacheOsm::~QGeoFileTileCacheOsm()
     
 }
 
-QImage QGeoFileTileCacheOsm::drawOnTile(QImage image)
+QImage QGeoFileTileCacheOsm::drawOnTile(QImage image, const QGeoTileSpec &spec)
 {
     QPainter painter(&image);
     QPen pen;
     pen.setWidth(3);
     pen.setColor(Qt::black);
     painter.setPen(pen);
-    painter.drawLine(drawingVector.at(0).xFrom, drawingVector.at(0).yFrom,drawingVector.at(0).xTo, drawingVector.at(0).yTo);
+    //qDebug()<<drawingVector.at(currPosOfDrawing).tileX<<" "<<spec.x()<<" "<<drawingVector.at(currPosOfDrawing).tileY<<" "<<spec.y();
+    for(int i=0; i<drawingVector.size(); i++)
+    {
+        if(drawingVector.at(i).tileX == spec.x()&&drawingVector.at(i).tileY==spec.y())
+        {
+            painter.drawLine(drawingVector.at(i).xFrom, drawingVector.at(i).yFrom,
+                             drawingVector.at(i).xTo, drawingVector.at(i).yTo);
+        }
+    }
+
+
     return image;
 }
 QGeoFileTileCacheOsm::QGeoFileTileCacheOsm()
@@ -56,20 +74,16 @@ coordinateStruct QGeoFileTileCacheOsm::xyToLatLon(const QGeoTileSpec &spec)
     return coord;
 }
 
-bool QGeoFileTileCacheOsm::isNeededTile(const QGeoTileSpec &spec, coordinateStruct coordinates)
+bool QGeoFileTileCacheOsm::isNeededTile(const QGeoTileSpec &spec)
 {
-    int x = (coordinates.longitude + 180)/360 * pow(2,spec.zoom());
-    //qDebug()<<x;
-    double latrad = coordinates.lattitude * M_PI/180.0;
-    int y = (int)(floor((1.0 - asinh(tan(latrad)) / M_PI) / 2.0 * (1 << spec.zoom())));
-    if(spec.x() == x && spec.y() == y)
+    for(int i = 0; i<drawingVector.size(); i++)
+    {
+    if(drawingVector.at(i).tileX == (uint32_t)spec.x() && drawingVector.at(i).tileY == (uint32_t)spec.y())
     {
         return true;
     }
-    else
-    {
-        return false;
     }
+        return false;
 }
 
 QSharedPointer<QGeoTileTexture> QGeoFileTileCacheOsm::get(const QGeoTileSpec &spec)
@@ -121,27 +135,21 @@ void QGeoFileTileCacheOsm::init()
 
 QSharedPointer<QGeoTileTexture> QGeoFileTileCacheOsm::getFromOfflineStorage(const QGeoTileSpec &spec)
 {
-    QTileFinder *finder = new QTileFinder();
     coordinateStruct str;
+    if(isNewZoom!=spec.zoom())
+    {
+        qDebug()<<isNewZoom<<" "<<spec.zoom();
+        isNewZoom = spec.zoom();
+        stepLatLon(spec);
+        prepareLineDrawing(spec.zoom(), &coordinates);
+    }
+    QTileFinder *finder = new QTileFinder();
+
     QImage image = finder->getTile(spec.x(),spec.y(),spec.zoom());
-
-    str.lattitude = 53.9124;
-    str.longitude = 27.4385;
-    coordinates.push_back(str);
-    coordinateStruct str1;
-    str1.lattitude = 53.9094;
-    str1.longitude = 27.4481;
-    coordinates.push_back(str1);
-
-    //qDebug()<<coordinates->at(0).lattitude<<" "<<coordinates->at(0).longitude;
-        if(isNeededTile(spec, str))
+        if(isNeededTile(spec))
         {
-            stepLatLon(spec);
-            prepareLineDrawing(spec.zoom(), &coordinates);
-            //stepLatLon(spec);
-            image = drawOnTile(image);
+            image = drawOnTile(image,spec);
         }
-//    }
     return addToTextureCache(spec, image);
 }
 
@@ -204,17 +212,12 @@ void QGeoFileTileCacheOsm::prepareLineDrawing(int zoom, QVector<coordinateStruct
         stepLatLon(startSpec);
         offsetY1 = abs((lattitude - coordinateVector->at(count).lattitude))/stepLattitude;
         offsetX1 = abs((longitude - coordinateVector->at(count).longitude))/stepLongitude;//посчитать вручную
-
         startSpec.setX(xMerk2);
         startSpec.setY(yMerk2);
         stepLatLon(startSpec);
         offsetY2 = abs((lattitude - coordinateVector->at(count+1).lattitude)/stepLattitude);
         offsetX2 = abs((longitude - coordinateVector->at(count+1).longitude)/stepLongitude);
-        qDebug()<<lattitude<<" "<< coordinateVector->at(count).lattitude<< " "<<stepLattitude;
-        qDebug()<<longitude<<" q "<<coordinateVector->at(count).longitude<< " "<<stepLongitude;
-        //добавить условие на одном ли тайле находятся точки, и если не на одном то дальше по формуле считать куда оно идёт
-        //рисует не там де нада
-        if(offsetX2 <= 256 && offsetY2 <= 256)
+        if(xMerk1 == xMerk2 && yMerk1 == yMerk2)
         {
             CountDotsForLine dots;
             dots.tileX = xMerk1;
@@ -225,6 +228,113 @@ void QGeoFileTileCacheOsm::prepareLineDrawing(int zoom, QVector<coordinateStruct
             dots.yTo = offsetY2;
             drawingVector.push_back(dots);
         }
+        else
+        {
+            double longitud = coordinateVector->at(count+1).longitude - coordinateVector->at(count).longitude;
+            double lattitud = coordinateVector->at(count+1).lattitude - coordinateVector->at(count).lattitude;
+            int pixelsLon = longitud/stepLongitude;
+            int pixelsLat = lattitud/stepLattitude;
+            //qDebug()<< pixelsLon<<" "<<pixelsLat;
+            int pixelsLonCount = 0;
+            int pixelsLatCount = 0;
+            int lastXoffset = 0;
+            int lastYoffset = 0;
+            int offsetXForThisTile = offsetX1;
+            int offsetYForThisTile = offsetY1;
+            int startXOffset = offsetX1;
+            int startYOffset = offsetY1;
+            int hypotenuse = sqrt(pow(pixelsLon,2)+pow(pixelsLat,2));
+            while(pixelsLonCount != pixelsLon && pixelsLatCount != pixelsLat)
+            {
+
+                pixelsLonCount++;
+                pixelsLatCount = floor((double)pixelsLat/(double)pixelsLon*pixelsLonCount);
+                offsetXForThisTile += pixelsLonCount - lastXoffset;
+                if(pixelsLat<0)
+                {
+                offsetYForThisTile += -pixelsLatCount + lastYoffset;//неправильно рисует, подумать
+                }
+                else
+                {
+                    offsetYForThisTile += pixelsLatCount - lastYoffset;
+                }
+                //qDebug()<<offsetXForThisTile<<" "<<offsetYForThisTile<<" "<<pixelsLatCount<<" "<<lastYoffset;
+                lastXoffset = pixelsLonCount;
+                lastYoffset = pixelsLatCount;
+                if(offsetXForThisTile <= 0)
+                {
+                    CountDotsForLine dots;
+                    dots.tileX = xMerk1;
+                    dots.tileY = yMerk1;
+                    dots.xFrom = startXOffset;
+                    dots.yFrom = startYOffset;
+                    dots.xTo = offsetXForThisTile;
+                    dots.yTo = offsetYForThisTile;
+                    drawingVector.push_back(dots);
+                    xMerk1--;
+                    startXOffset = 256;
+                    startYOffset = offsetYForThisTile;
+                    offsetXForThisTile = 255;
+                }
+                else if(offsetXForThisTile >= 255)
+                {
+                    CountDotsForLine dots;
+                    dots.tileX = xMerk1;
+                    dots.tileY = yMerk1;
+                    dots.xFrom = startXOffset;
+                    dots.yFrom = startYOffset;
+                    dots.xTo = offsetXForThisTile;
+                    dots.yTo = offsetYForThisTile;//мб тут
+                    drawingVector.push_back(dots);
+                    xMerk1++;
+                    startXOffset = 0;
+                    startYOffset = offsetYForThisTile;
+                    offsetXForThisTile = 1;
+                    //qDebug()<<"Fuck"<<offsetXForThisTile;
+                }
+                if(offsetYForThisTile >= 256)
+                {
+                    CountDotsForLine dots;
+                    dots.tileX = xMerk1;
+                    dots.tileY = yMerk1;
+                    dots.xFrom = startXOffset;
+                    dots.yFrom = startYOffset;
+                    dots.xTo = offsetXForThisTile;
+                    dots.yTo = offsetYForThisTile;
+                    drawingVector.push_back(dots);
+                    yMerk1++;
+                    startXOffset = offsetXForThisTile;
+                    startYOffset = 0;
+                    offsetYForThisTile = 1;
+                }
+                else if(offsetYForThisTile <= 0)
+                {
+                    CountDotsForLine dots;
+                    dots.tileX = xMerk1;
+                    dots.tileY = yMerk1;
+                    dots.xFrom = startXOffset;
+                    dots.yFrom = startYOffset;
+                    dots.xTo = offsetXForThisTile;
+                    dots.yTo = offsetYForThisTile;
+                    drawingVector.push_back(dots);
+                    yMerk1--;
+                    startXOffset = offsetXForThisTile;
+                    startYOffset = 256;
+                    offsetYForThisTile = 255;
+                }
+            }
+            if(offsetXForThisTile>0&&offsetXForThisTile<256&&offsetYForThisTile>0&&offsetYForThisTile<256)
+            {
+            CountDotsForLine dots;
+            dots.tileX = xMerk1;
+            dots.tileY = yMerk1;
+            dots.xFrom = startXOffset;
+            dots.yFrom = startYOffset;
+            dots.xTo = offsetXForThisTile;
+            dots.yTo = offsetYForThisTile;
+            drawingVector.push_back(dots);
+        }
+        }
         count++;
     }
 }
@@ -234,9 +344,9 @@ void QGeoFileTileCacheOsm::stepLatLon(const QGeoTileSpec &spec)
     longitude = (spec.x()/pow(2,spec.zoom()))*360-180;
     lattitude = atan(sinh(M_PI-(spec.y()/pow(2,spec.zoom()))*(2*M_PI)))*(180/M_PI);
     longitudeOfTheTopRightCorner = (spec.x()/pow(2,spec.zoom()))*360-180;
-    lattitudeOfTheTopRightCorner = atan(sinh(M_PI-((spec.y()+1)/pow(2,spec.zoom()))*(2*M_PI)))*(180/M_PI);
-    longitudeOfTheBottomLeftCorner = ((spec.x()+1)/pow(2,spec.zoom()))*360-180;
-    lattitudeOfTheBottomLeftCorner = atan(sinh(M_PI-(spec.x()/pow(2,spec.zoom()))*(2*M_PI)))*(180/M_PI);
+    double lattitudeOfTheTopRightCorner = atan(sinh(M_PI-((spec.y()+1)/pow(2,spec.zoom()))*(2*M_PI)))*(180/M_PI);
+    double longitudeOfTheBottomLeftCorner = ((spec.x()+1)/pow(2,spec.zoom()))*360-180;
+    double lattitudeOfTheBottomLeftCorner = atan(sinh(M_PI-(spec.x()/pow(2,spec.zoom()))*(2*M_PI)))*(180/M_PI);
     stepLattitude = (lattitude - lattitudeOfTheTopRightCorner)/256;
     stepLongitude = (longitudeOfTheBottomLeftCorner - longitude)/256;
 }

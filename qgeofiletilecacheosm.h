@@ -46,6 +46,7 @@
 #include <QPainter>
 #include <math.h>
 #include <qatomic.h>
+#include <QThread>
 #include <qtilefinder.h>
 #include "coordinateStruct.h"
 #include "LineDrawingStruct.h"
@@ -65,13 +66,13 @@ public:
     static QGeoFileTileCacheOsm * instance;
     QVector<coordinateStruct> coordinates;
     QVector<CountDotsForLine>  drawingVector;
-    QImage drawOnTile(QImage image);
+    QImage drawOnTile(QImage image, const QGeoTileSpec &spec);
     QGeoFileTileCacheOsm *getInstance();
     coordinateStruct xyToLatLon(const QGeoTileSpec &spec);
-    double lattitude, longitude, longitudeOfTheTopRightCorner, lattitudeOfTheTopRightCorner, longitudeOfTheBottomLeftCorner,lattitudeOfTheBottomLeftCorner;
+    double lattitude, longitude, longitudeOfTheTopRightCorner;
     double stepLattitude;
     double stepLongitude;
-    bool isNeededTile(const QGeoTileSpec &spec, coordinateStruct coordinates);
+    bool isNeededTile(const QGeoTileSpec &spec);
     QSharedPointer<QGeoTileTexture> get(const QGeoTileSpec &spec) override;
     QSharedMemory rofl;
 
@@ -88,6 +89,8 @@ protected:
     void prepareLineDrawing(int zoom, QVector<coordinateStruct>* coordinateVector);
     void clearObsoleteTiles(const QGeoTileProviderOsm *p);
     void stepLatLon(const QGeoTileSpec &spec);
+    int isNewZoom = 1;
+    int currPosOfDrawing = 0;
     QDir m_offlineDirectory;
     bool m_offlineData;
     QVector<QGeoTileProviderOsm *> m_providers;
