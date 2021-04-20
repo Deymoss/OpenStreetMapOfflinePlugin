@@ -20,13 +20,33 @@ QGeoFileTileCacheOsm::QGeoFileTileCacheOsm(const QVector<QGeoTileProviderOsm *> 
             m_offlineData = true;
     }
     coordinateStruct str;
-    str.lattitude = 53.9124;
-    str.longitude = 27.4385;
+    str.lattitude = 52.140;
+    str.longitude = 24.093;
     coordinates.push_back(str);
     coordinateStruct str1;
-    str1.lattitude = 52.4661;
-    str1.longitude = 30.9457;
+    str1.lattitude = 53.762;
+    str1.longitude = 26.202;
     coordinates.push_back(str1);
+    coordinateStruct str2;
+    str2.lattitude = 54.079;
+    str2.longitude = 25.433;
+    coordinates.push_back(str2);
+    coordinateStruct str3;
+    str3.lattitude = 54.470;
+    str3.longitude = 27.883;
+    coordinates.push_back(str3);
+    coordinateStruct str4;
+    str4.lattitude = 55.147;
+    str4 .longitude = 29.729;
+    coordinates.push_back(str4);
+    coordinateStruct str5;
+    str5.lattitude = 54.272;
+    str5.longitude = 30.168;
+    coordinates.push_back(str5);
+    coordinateStruct str6;
+    str6.lattitude = 52.362;
+    str6.longitude = 24.478;
+    coordinates.push_back(str6);
     qDebug()<<"нормальный конструктор";
 
 }
@@ -40,7 +60,7 @@ QImage QGeoFileTileCacheOsm::drawOnTile(QImage image, const QGeoTileSpec &spec)
 {
     QPainter painter(&image);
     QPen pen;
-    pen.setWidth(3);
+    pen.setWidth(2);
     pen.setColor(Qt::black);
     painter.setPen(pen);
     //qDebug()<<drawingVector.at(currPosOfDrawing).tileX<<" "<<spec.x()<<" "<<drawingVector.at(currPosOfDrawing).tileY<<" "<<spec.y();
@@ -243,22 +263,28 @@ void QGeoFileTileCacheOsm::prepareLineDrawing(int zoom, QVector<coordinateStruct
             int offsetYForThisTile = offsetY1;
             int startXOffset = offsetX1;
             int startYOffset = offsetY1;
-            int hypotenuse = sqrt(pow(pixelsLon,2)+pow(pixelsLat,2));
             while(pixelsLonCount != pixelsLon && pixelsLatCount != pixelsLat)
             {
-
-                pixelsLonCount++;
+                if(pixelsLon<0)
+                {
+                   pixelsLonCount--;
+                   offsetXForThisTile += pixelsLonCount - lastXoffset;
+                }
+                else
+                {
+                   pixelsLonCount++;
+                   offsetXForThisTile += pixelsLonCount - lastXoffset;
+                }
                 pixelsLatCount = floor((double)pixelsLat/(double)pixelsLon*pixelsLonCount);
-                offsetXForThisTile += pixelsLonCount - lastXoffset;
                 if(pixelsLat<0)
                 {
                 offsetYForThisTile += -pixelsLatCount + lastYoffset;//неправильно рисует, подумать
                 }
                 else
                 {
-                    offsetYForThisTile += pixelsLatCount - lastYoffset;
+                    offsetYForThisTile -= pixelsLatCount - lastYoffset;
                 }
-                //qDebug()<<offsetXForThisTile<<" "<<offsetYForThisTile<<" "<<pixelsLatCount<<" "<<lastYoffset;
+                //qDebug()<<offsetXForThisTile<<" "<<offsetYForThisTile<<" "<<pixelsLatCount<<" "<<pixelsLon<<" "<<pixelsLat<<" "<<lastYoffset<<" "<<pixelsLonCount;
                 lastXoffset = pixelsLonCount;
                 lastYoffset = pixelsLatCount;
                 if(offsetXForThisTile <= 0)
